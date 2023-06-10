@@ -22,6 +22,7 @@ JetSpritePtr    word                ; pointer to player0 sprite lookup table
 JetColorPtr     word                ; pointer to player0 color lookup table
 BomberSpritePtr word                ; pointer to player1 sprite lookup table
 BomberColorPtr  word                ; pointer to player1 color lookup table
+JetAnimOffset   byte                ; player0 sprite frame offset for animation
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Define constants
@@ -142,6 +143,9 @@ GameVisibleLine:
     lda #0                      ; else, set lookup index to 0
 
 .DrawSpriteP0
+    clc
+    adc JetAnimOffset           ; jump to the correct sprite frame address in memory
+    
     tay                         ; Y is the only register that handles indirect addressing
     lda (JetSpritePtr),Y        ; load player0 bitmap data from lookup table
     sta WSYNC
@@ -173,6 +177,9 @@ GameVisibleLine:
     dex                         ; --x
     bne .GameLineLoop           ; repeat next main game scanline until finished
 
+    lda #0
+    sta JetAnimOffset           ; reset jet animation to 0 each frame
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Display Overscan
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -196,6 +203,8 @@ CheckP0Up:
     ;; Here goes logic if down
     ;;;;;;;;;;;
     inc JetYPos
+    lda #0                  
+    sta JetAnimOffset               ; reset sprite animation offset
 
 CheckP0Down:
     lda #%00100000
@@ -205,6 +214,8 @@ CheckP0Down:
     ;; Here goes logic if down
     ;;;;;;;;;;;
     dec JetYPos
+    lda #0                  
+    sta JetAnimOffset               ; reset sprite animation offset
 
 
 CheckP0Left:
@@ -215,6 +226,8 @@ CheckP0Left:
     ;; Here goes logic if left
     ;;;;;;;;;;;
     dec JetXPos
+    lda JET_HEIGHT                  ; 9
+    sta JetAnimOffset               ; set animation offset to the second frame
 
 CheckP0Right:
     lda #%10000000
@@ -224,6 +237,9 @@ CheckP0Right:
     ;; Here goes logic if right
     ;;;;;;;;;;;
     inc JetXPos
+    lda JET_HEIGHT                  ; 9
+    sta JetAnimOffset               ; set animation offset to the second frame
+
 
 EndInputCheck:                  ; Fallback when no input was performed
 
