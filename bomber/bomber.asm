@@ -184,6 +184,49 @@ GameVisibleLine:
     lda #0
     sta VBLANK                  ; turn off VBLANK
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Process Joystick Input
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+CheckP0Up:
+    lda #%00010000
+    bit SWCHA
+    bne CheckP0Down
+    ;;;;;;;;;;;
+    ;; Here goes logic if down
+    ;;;;;;;;;;;
+    inc JetYPos
+
+CheckP0Down:
+    lda #%00100000
+    bit SWCHA
+    bne CheckP0Left
+    ;;;;;;;;;;;
+    ;; Here goes logic if down
+    ;;;;;;;;;;;
+    dec JetYPos
+
+
+CheckP0Left:
+    lda #%01000000
+    bit SWCHA
+    bne CheckP0Right
+    ;;;;;;;;;;;
+    ;; Here goes logic if left
+    ;;;;;;;;;;;
+    dec JetXPos
+
+CheckP0Right:
+    lda #%10000000
+    bit SWCHA
+    bne EndInputCheck
+    ;;;;;;;;;;;
+    ;; Here goes logic if right
+    ;;;;;;;;;;;
+    inc JetXPos
+
+EndInputCheck:                  ; Fallback when no input was performed
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Loop back to start the frame
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
