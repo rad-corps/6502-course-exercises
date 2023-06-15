@@ -23,6 +23,7 @@ JetColorPtr     word                ; pointer to player0 color lookup table
 BomberSpritePtr word                ; pointer to player1 sprite lookup table
 BomberColorPtr  word                ; pointer to player1 color lookup table
 JetAnimOffset   byte                ; player0 sprite frame offset for animation
+Random          byte                ; random number generated to set enemy position
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Define constants
@@ -54,6 +55,9 @@ Reset:
     lda #54
     sta BomberXPos
 
+    lda #%11010100
+    sta Random                  ; Random = $D4
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Initialize the pointers to the correct lookup table addresses
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -84,12 +88,12 @@ StartFrame:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Calculations and tasks performed in the pre-VBLANK
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    lda JetXPos
-    ldy #0
+    lda JetXPos                 ; x-position
+    ldy #0                      ; object type
     jsr SetObjectXPos           ; set player 0 horizontal position
 
-    lda BomberXPos
-    ldy #1
+    lda BomberXPos              ; x-position
+    ldy #1                      ; object type
     jsr SetObjectXPos           ; set player 1 horizontal position
 
     sta WSYNC
@@ -255,10 +259,8 @@ UpdateBomberPosition:
     jmp EndPositionUpdate
 
 .ResetBomberPosition
-    lda #96
-    sta BomberYPos
+    jsr GetRandomBomberPos          ; call subroutine for next random enemy x-position
 
-    ;; TODO: set bomber X position to random number
 
 EndPositionUpdate:
 
@@ -288,75 +290,105 @@ SetObjectXPos subroutine
     sta RESP0,Y                 ; fix object position in 15-step increment
     rts
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Subroutine to generate a Linear-Feedback Shift Register random number
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Generate a LFSR random number 
+;; Divide the random value by 4 to limit the size of the result to match river
+;; Add 30 to compensate for the left green playfield
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+GetRandomBomberPos subroutine
+    lda Random 
+    asl             ; shift left
+    eor Random      ; exclusive or
+    asl
+    eor Random      ; exclusive or
+    asl
+    asl
+    eor Random      ; exclusive or
+    asl
+    rol Random               ; performs a series of shifts and bit operations
+
+    lsr 
+    lsr             ; 2 right shifts to divide by 4
+    sta BomberXPos  ; save it to the variable BomberXPos
+    lda #30
+    adc BomberXPos ; add 30 +BomberXPos
+    sta BomberXPos  ; and sets the new value to the bomber x position
+
+    lda #96
+    sta BomberYPos  ; set y pos to top of screen
+
+    rts
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Declare ROM lookup tables
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 JetSprite:
-        .byte #%00000000;$00
-        .byte #%01010100;$34
-        .byte #%01111100;$04
-        .byte #%01111100;$04
-        .byte #%01111100;$02
-        .byte #%00111000;$02
-        .byte #%00111000;$04
-        .byte #%00111000;$04
-        .byte #%00010000;$08
+    .byte #%00000000         ;
+    .byte #%00010100         ;   # #
+    .byte #%01111111         ; #######
+    .byte #%00111110         ;  #####
+    .byte #%00011100         ;   ###
+    .byte #%00011100         ;   ###
+    .byte #%00001000         ;    #
+    .byte #%00001000         ;    #
+    .byte #%00001000         ;    #
 
 JetSpriteTurn:
-        .byte #%00000000;$00
-        .byte #%01010100;$34
-        .byte #%01111100;$04
-        .byte #%00111000;$04
-        .byte #%00111000;$02
-        .byte #%00111000;$02
-        .byte #%00111000;$04
-        .byte #%00010000;$04
-        .byte #%00010000;$08
-
-JetColor:
-        .byte #$00;
-        .byte #$34;
-        .byte #$04;
-        .byte #$04;
-        .byte #$02;
-        .byte #$02;
-        .byte #$04;
-        .byte #$04;
-        .byte #$08;
-
-JetColorTurn:
-        .byte #$00;
-        .byte #$34;
-        .byte #$04;
-        .byte #$04;
-        .byte #$02;
-        .byte #$02;
-        .byte #$04;
-        .byte #$04;
-        .byte #$08;
+    .byte #%00000000         ;
+    .byte #%00001000         ;    #
+    .byte #%00111110         ;  #####
+    .byte #%00011100         ;   ###
+    .byte #%00011100         ;   ###
+    .byte #%00011100         ;   ###
+    .byte #%00001000         ;    #
+    .byte #%00001000         ;    #
+    .byte #%00001000         ;    #
 
 BomberSprite:
-        .byte #%00000000;$00
-        .byte #%00000000;$30
-        .byte #%00101000;$30
-        .byte #%11111110;$30
-        .byte #%01111100;$30
-        .byte #%01010100;$30
-        .byte #%00010000;$30
-        .byte #%00010000;$30
-        .byte #%00010000;$30
+    .byte #%00000000         ;
+    .byte #%00001000         ;    #
+    .byte #%00001000         ;    #
+    .byte #%00101010         ;  # # #
+    .byte #%00111110         ;  #####
+    .byte #%01111111         ; #######
+    .byte #%00101010         ;  # # #
+    .byte #%00001000         ;    #
+    .byte #%00011100         ;   ###
+
+JetColor:
+    .byte #$00
+    .byte #$FE
+    .byte #$0C
+    .byte #$0E
+    .byte #$0E
+    .byte #$04
+    .byte #$BA
+    .byte #$0E
+    .byte #$08
+
+JetColorTurn:
+    .byte #$00
+    .byte #$FE
+    .byte #$0C
+    .byte #$0E
+    .byte #$0E
+    .byte #$04
+    .byte #$0E
+    .byte #$0E
+    .byte #$08
 
 BomberColor:
-        .byte #$00;
-        .byte #$30;
-        .byte #$30;
-        .byte #$30;
-        .byte #$30;
-        .byte #$30;
-        .byte #$30;
-        .byte #$30;
-        .byte #$30;
+    .byte #$00
+    .byte #$32
+    .byte #$32
+    .byte #$0E
+    .byte #$40
+    .byte #$40
+    .byte #$40
+    .byte #$40
+    .byte #$40
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
