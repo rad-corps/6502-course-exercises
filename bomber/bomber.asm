@@ -244,6 +244,25 @@ CheckP0Right:
 EndInputCheck:                  ; Fallback when no input was performed
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Calculations to update position for next frame
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+UpdateBomberPosition:
+    lda BomberYPos
+    clc
+    cmp #0                          ; compare bomber Y pos with 0
+    bmi .ResetBomberPosition        ; if bomber Y pos < 0, reset Y position to top of screen
+    dec BomberYPos                  ; else, decrement enemy y-position for next frame
+    jmp EndPositionUpdate
+
+.ResetBomberPosition
+    lda #96
+    sta BomberYPos
+
+    ;; TODO: set bomber X position to random number
+
+EndPositionUpdate:
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Loop back to start the frame
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     jmp StartFrame              ; continue to display the next frame
@@ -296,6 +315,17 @@ JetSpriteTurn:
         .byte #%00010000;$08
 
 JetColor:
+        .byte #$00;
+        .byte #$34;
+        .byte #$04;
+        .byte #$04;
+        .byte #$02;
+        .byte #$02;
+        .byte #$04;
+        .byte #$04;
+        .byte #$08;
+
+JetColorTurn:
         .byte #$00;
         .byte #$34;
         .byte #$04;
