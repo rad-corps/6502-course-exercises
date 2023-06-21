@@ -17,7 +17,11 @@ JetXPos         byte                ; player0 x-position
 JetYPos         byte                ; player0 y-position
 BomberXPos      byte                ; player1 x-position
 BomberYPos      byte                ; player1 y-position
-
+Score           byte                ; 2 digit score stored as a BCD
+Timer           byte                ; 2 digit timer stored as BCD
+Temp            byte                ; auxillery value to score temporary score values
+OnesDigitOffset word                ; lookup table offset for the score 1's digit
+TensDigitOffset word                ; lookup table offset for the score 10's digit
 JetSpritePtr    word                ; pointer to player0 sprite lookup table
 JetColorPtr     word                ; pointer to player0 color lookup table
 BomberSpritePtr word                ; pointer to player1 sprite lookup table
@@ -30,6 +34,7 @@ Random          byte                ; random number generated to set enemy posit
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 JET_HEIGHT = 9                      ; 
 BOMBER_HEIGHT = 9
+DIGITS_HEIGHT = 5
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Start our ROM code at memory address $F000
@@ -57,6 +62,10 @@ Reset:
 
     lda #%11010100
     sta Random                  ; Random = $D4
+
+    lda #0
+    sta Score
+    sta Timer                   ; Score = Timer = 0
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Initialize the pointers to the correct lookup table addresses
@@ -96,6 +105,8 @@ StartFrame:
     ldy #1                      ; object type
     jsr SetObjectXPos           ; set player 1 horizontal position
 
+    jsr CalculateDigitOffset    ; calculate the scoreboard digit lookup table offset
+
     sta WSYNC
     sta HMOVE                   ; apply the horizontal offset previously set
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -125,7 +136,10 @@ StartFrame:
     sta PF2
     sta GRP0
     sta GRP1
+    lda #$1C                    ; set scoreboard color to white
     sta COLUPF
+    lda #%00000000
+    sta CTRLPF                  ; do not reflect playfield
     REPEAT 20
         STA WSYNC               ; display 20 scanlines where the scoreboard goes
     REPEND
@@ -367,6 +381,34 @@ GetRandomBomberPos subroutine
 
     rts
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Subroutine to handle scoreboard digits to be displayed on the screen
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Convert the high and low nibbles of the variable Score and Timer
+;; into the offsets of digits lookup table so the values can be displayed.
+;; Each digit has a height of 5 bytes in the lookup table.
+;;
+;; For the low nibble we need to multiply by 5 (offset into lookup table)
+;;   - we can use left shift to perform multiplication by 2
+;;   - for any number N, the value of N*5 = (N*2*2)+N
+;;
+;; For the upper nibble, since its already times 16, we need to divide it by 16
+;; and then multiply by 5
+;;   - we can use right shifts to perform division by 2
+;;   - for any number N, the value of (N/16)*5 = (N/2/2)+(N/2/2/2/2)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+CalculateDigitOffset subroutine
+    ldx #1                  ; X register is the loop counter
+.PrepareScoreLoop           ; this will loop twice, first X=1, then X=0
+
+    lda Score,X             ; load A with Timer (X=1) or Score (X=0)
+    and #$0F                ; remove the tens digit by masking 4 bits 00001111
+    sta Temp                ; save the value of A into Temp
+
+    dex                     ; --x
+    bpl .PrepareScoreLoop   ; while X>= 0, loop to pass a second time
+    
+    rts
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Declare ROM lookup tables
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
